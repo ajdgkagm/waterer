@@ -1,18 +1,23 @@
+require("dotenv").config(); // Make sure to install dotenv
 const express = require("express");
 const admin = require("firebase-admin");
 const cors = require("cors");
 
-// Initialize Firebase Admin SDK (Use your service account)
-const serviceAccount = require("./ph-sensor-monitor-bsu-cit-firebase-adminsdk-fbsvc-60efd456e0.json"); // Download from Firebase console
-
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+  }),
 });
 
 const app = express();
 app.use(cors());
-
-// API to fetch users
+console.log("ENV CHECK:", {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
+});
 app.get("/users", async (req, res) => {
   try {
     const listUsers = await admin.auth().listUsers();
@@ -21,7 +26,7 @@ app.get("/users", async (req, res) => {
       email: user.email,
       displayName: user.displayName || "N/A",
       photoURL: user.photoURL || "",
-      createdAt: new Date(user.metadata.creationTime).toLocaleDateString()
+      createdAt: new Date(user.metadata.creationTime).toLocaleDateString(),
     })));
   } catch (error) {
     res.status(500).json({ error: error.message });
