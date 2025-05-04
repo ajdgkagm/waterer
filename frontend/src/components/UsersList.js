@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import "../App.css"; // Import CSS file
+import "../App.css";
 
 const UsersList = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/users") // Backend API URL
+    axios.get("http://localhost:5000/users")
       .then(response => {
         setUsers(response.data);
         setLoading(false);
@@ -38,7 +38,7 @@ const UsersList = () => {
               <tr key={user.uid}>
                 <td>{user.uid}</td>
                 <td>{user.email}</td>
-                <td>{user.displayName || "N/A"}</td>
+                <td>{user.displayName}</td>
                 <td>{new Date(user.createdAt).toLocaleString()}</td>
               </tr>
             ))}

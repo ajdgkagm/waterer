@@ -1,4 +1,4 @@
-require("dotenv").config(); // Make sure to install dotenv
+require("dotenv").config();
 const express = require("express");
 const admin = require("firebase-admin");
 const cors = require("cors");
@@ -13,25 +13,33 @@ admin.initializeApp({
 
 const app = express();
 app.use(cors());
-console.log("ENV CHECK:", {
-  projectId: process.env.FIREBASE_PROJECT_ID,
-  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-  hasPrivateKey: !!process.env.FIREBASE_PRIVATE_KEY,
-});
+
 app.get("/users", async (req, res) => {
   try {
     const listUsers = await admin.auth().listUsers();
-    res.json(listUsers.users.map(user => ({
-      uid: user.uid,
-      email: user.email,
-      displayName: user.displayName || "N/A",
-      photoURL: user.photoURL || "",
-      createdAt: new Date(user.metadata.creationTime).toLocaleDateString(),
-    })));
+    console.log("Fetched users:", listUsers.users.length);
+    res.json(
+      listUsers.users.map((user) => ({
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || "N/A",
+        photoURL: user.photoURL || "",
+        createdAt: user.metadata.creationTime || "Unknown",
+      }))
+    );
   } catch (error) {
+    console.error("Failed to fetch users:", error); // 👈 log the full error
     res.status(500).json({ error: error.message });
   }
 });
 
-const PORT = 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+console.log("Loaded ENV", {
+  projectId: process.env.FIREBASE_PROJECT_ID,
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+  privateKeyStartsWith: process.env.FIREBASE_PRIVATE_KEY?.slice(0, 30),
+},'env');
+
+app.listen(5000, () => {
+  console.log("Server running on http://localhost:5000");
+});

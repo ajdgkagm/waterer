@@ -20,7 +20,7 @@ async function sendWhatsAppAlert(message) {
 }
 
 exports.monitorSensorAlerts = functions.firestore
-    .document("sensorData/latest") // Assuming latest data is stored here
+    .document("sensor_data/ntu") // Assuming latest data is stored here
     .onWrite(async (change, context) => {
         const data = change.after.data();
         if (!data) return;
