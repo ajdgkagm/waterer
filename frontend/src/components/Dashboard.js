@@ -31,18 +31,24 @@ const Dashboard = () => {
     const unsubscribeData = onValue(dataRef, (snapshot) => {
       const rawData = snapshot.val();
       if (!rawData) return;
-
-      const dataArray = Object.entries(rawData).map(([key, value]) => ({
-        timestamp: new Date(value.timestamp),
-        pH: value.pH,
-        turbidity: value.turbidity,
-        tds: value.tds, // Assuming TDS is part of the data
-      }));
-
-      setSensorData(dataArray.slice(-10));
-      checkThresholds(dataArray[dataArray.length - 1], thresholds); // Updated to use 'thresholds' directly
+    
+      const entries = Object.entries(rawData).sort((a, b) => a[1].timestamp - b[1].timestamp);
+      const latestEntry = entries[entries.length - 1][1];
+    
+      const latestData = {
+        timestamp: new Date(latestEntry.timestamp),
+        pH: latestEntry.pH,
+        turbidity: latestEntry.turbidity,
+        tds: latestEntry.tds,
+      };
+    
+      setSensorData(prevData => {
+        const newData = [...prevData, latestData];
+        return newData.slice(-20); // Keep only latest 20 entries
+      });
+    
+      checkThresholds(latestData, thresholds);
     });
-
     return () => {
       unsubscribe();
       unsubscribeData();
