@@ -26,12 +26,17 @@ const Dashboard = () => {
       setThresholds(thresholdsData);
     });
 
-    const dataRef = ref(database, "sensor_data/ntu");
+    const dataRef = ref(database, "sensor_data");
 
+    
     const unsubscribeData = onValue(dataRef, (snapshot) => {
       const rawData = snapshot.val();
       if (!rawData) return;
     
+
+      console.log(rawData,'rawData');
+      console.log(Object.values(rawData.ntu),'ntu');
+
       const entries = Object.entries(rawData).sort((a, b) => a[1].timestamp - b[1].timestamp);
       const latestEntry = entries[entries.length - 1][1];
     
@@ -46,7 +51,7 @@ const Dashboard = () => {
         const newData = [...prevData, latestData];
         return newData.slice(-20); // Keep only latest 20 entries
       });
-    
+      
       checkThresholds(latestData, thresholds);
     });
     return () => {
@@ -106,63 +111,31 @@ const Dashboard = () => {
     sendWhatsAppAlert("🚨 Manual Alert Triggered! Please check the water quality system.");
   };
 
-  const exportData = async () => {
-    if (!startDate || !endDate) {
-      alert("Please select a date range.");
-      return;
-    }
-
-    const startTimestamp = new Date(startDate);
-    const endTimestamp = new Date(endDate);
-
-    const q = query(
-      collection(db, "sensorData"),
-      where("timestamp", ">=", startTimestamp),
-      where("timestamp", "<=", endTimestamp),
-      orderBy("timestamp", "asc")
-    );
-
-    const snapshot = await getDocs(q);
-    const data = snapshot.docs.map((doc) => {
-      const raw = doc.data();
-      return {
-        ...raw,
-        timestamp: raw.timestamp?.toDate ? raw.timestamp.toDate() : new Date(raw.timestamp),
-      };
-    });
-
-    if (!data.length) {
-      alert("No data found for the selected range.");
-      return;
-    }
-
-    const csv = Papa.unparse(data);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    saveAs(blob, `sensor_data_${startDate}_to_${endDate}.csv`);
-  };
-
+  
   return (
     <div className="dashboard-container">
+     
       <h2>Real-Time Water Quality Monitoring</h2>
       <Line
+      key={JSON.stringify(sensorData)}
         data={{
           labels: sensorData.map((data) => data.timestamp.toLocaleTimeString()),
           datasets: [
             {
               label: "pH Level",
-              data: sensorData.map((data) => data.pH),
+              data: sensorData?.ntu ? Object.values(sensorData.ntu) : [],
               borderColor: "blue",
               fill: false,
             },
             {
               label: "Turbidity",
-              data: sensorData.map((data) => data.turbidity),
+              data: sensorData?.ph ? Object.values(sensorData.ph) : [],
               borderColor: "red",
               fill: false,
             },
             {
               label: "TDS",
-              data: sensorData.map((data) => data.tds),
+              data:sensorData?.tds ? Object.values(sensorData.tds) : [],
               borderColor: "green",
               fill: false,
             },
@@ -177,16 +150,7 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* Date Range for Export */}
-      {/* <div className="export-container">
-        <h3>Export Data</h3>
-        <div className="date-picker">
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          <span>to</span>
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        </div>
-        <button onClick={exportData} className="export-button">📥 Download CSV</button>
-      </div> */}
+      
     </div>
   );
 };
