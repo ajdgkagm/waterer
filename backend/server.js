@@ -13,7 +13,9 @@ admin.initializeApp({
 });
 
 const app = express();
-app.use(cors());
+
+app.use(cors({ origin: true }))
+
 
 app.get("/users", async (req, res) => {
   try {
