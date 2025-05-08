@@ -3,7 +3,7 @@ import { ref, onValue } from "firebase/database";
 import { database } from "../context/firebase-config";
 
 const CALLMEBOT_API_URL = "https://api.callmebot.com/whatsapp.php";
-const PHONE_NUMBER = "+639668649499"; // Replace with your registered WhatsApp number
+const PHONE_NUMBER = "639668649499"; // Replace with your registered WhatsApp number
 const API_KEY = "2570719"; // Replace with your CallMeBot API Key
 // Function to send WhatsApp alert
 export const sendWhatsAppAlert = async (message) => {

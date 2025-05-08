@@ -3,7 +3,7 @@ import axios from "axios";
 
 // WhatsApp Alert Function
 export const sendWhatsAppAlert = async (message) => {
-  const PHONE_NUMBER = "+639668649499"; // Your registered WhatsApp number
+  const PHONE_NUMBER = "639668649499"; // Your registered WhatsApp number
   const API_KEY = "2570719"; // Replace with your CallMeBot API key
   const CALLMEBOT_API_URL = `https://api.callmebot.com/whatsapp.php?phone=${PHONE_NUMBER}&text=${encodeURIComponent(message)}&apikey=${API_KEY}`;
 

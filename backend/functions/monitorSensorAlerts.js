@@ -5,7 +5,7 @@ const axios = require("axios");
 admin.initializeApp();
 const db = admin.firestore();
 
-const PHONE_NUMBER = "+639668649499"; // Your registered WhatsApp number
+const PHONE_NUMBER = "639668649499"; // Your registered WhatsApp number
 const API_KEY = "2570719"; // CallMeBot API key
 
 /**

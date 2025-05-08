@@ -2,7 +2,7 @@ const functions = require("firebase-functions");
 const axios = require("axios");
 const cors = require("cors")
 // Replace with your registered WhatsApp number and API key from CallMeBot
-const PHONE_NUMBER = "+639668649499";
+const PHONE_NUMBER = "639668649499";
 const API_KEY = "2570719"; // Your CallMeBot API Key
 const corsHandler = cors({ origin: true });
 // Function to send WhatsApp alert
