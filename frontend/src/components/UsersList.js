@@ -1,52 +1,45 @@
 import React, { useEffect, useState } from "react";
-import axios from "axios";
-import "../App.css";
+import { auth } from "../context/firebase-config";
+import { sendPasswordResetEmail } from "firebase/auth";
 
-const UsersList = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
+const UserProfile = () => {
+  const [user, setUser] = useState(null);
+  const [status, setStatus] = useState("");
 
   useEffect(() => {
-    axios.get("http://localhost:5000/users")
-      .then(response => {
-        setUsers(response.data);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error("Error fetching users:", error);
-        setLoading(false);
-      });
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      setUser(currentUser);
+    }
   }, []);
 
+  const handleResetPassword = async () => {
+    if (!user?.email) return;
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+      setStatus("Password reset email sent!");
+    } catch (error) {
+      console.error("Error sending reset email:", error);
+      setStatus("Failed to send reset email.");
+    }
+  };
+
   return (
-    <div className="users-container">
-      <h2>Registered Users</h2>
-      {loading ? (
-        <p className="loading-text">Loading...</p>
+    <div className="profile-container">
+      <h2>User Profile</h2>
+      {user ? (
+        <>
+          <p><strong>Email:</strong> {user.email}</p>
+          <button onClick={handleResetPassword} className="reset-button">
+            Send Password Reset Email
+          </button>
+          {status && <p>{status}</p>}
+        </>
       ) : (
-        <table className="users-table">
-          <thead>
-            <tr>
-              <th>UID</th>
-              <th>Email</th>
-              <th>Name</th>
-              <th>Created At</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map(user => (
-              <tr key={user.uid}>
-                <td>{user.uid}</td>
-                <td>{user.email}</td>
-                <td>{user.displayName}</td>
-                <td>{new Date(user.createdAt).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <p>Loading user...</p>
       )}
     </div>
   );
 };
 
-export default UsersList;
+export default UserProfile;

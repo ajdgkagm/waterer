@@ -179,6 +179,17 @@ body {
   transition: 0.3s;
 }
 
+.download-button {
+  padding: 12px 20px;
+  background-color: green;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 5px;
+  transition: 0.3s;
+}
+
 .alert-button:hover {
   background-color: darkred;
 }
@@ -377,4 +388,24 @@ body {
   .alert-button {
     width: 100%;
   }
+}
+
+
+.profile-container {
+  padding: 2rem;
+  border: 1px solid #ddd;
+  max-width: 400px;
+  margin: 2rem auto;
+  border-radius: 8px;
+  background: #f9f9f9;
+  text-align: center;
+}
+
+.reset-button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
 }
