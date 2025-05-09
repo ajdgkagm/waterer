@@ -36,6 +36,26 @@ app.get("/users", async (req, res) => {
   }
 });
 
+const axios = require("axios");
+
+// Add this to your existing Express server
+app.get('/send-alert', async (req, res) => {
+  const { phone, message } = req.query;
+  if (!phone || !message) {
+    return res.status(400).send('Missing phone or message');
+  }
+
+  try {
+    const url = `https://api.callmebot.com/whatsapp.php?phone=${phone}&text=${encodeURIComponent(message)}&apikey=${2570719}`;
+  const response = await axios.get(url);
+  res.status(200).send(response.data);
+
+  } catch (err) {
+    console.error('Error sending alert:', err);
+    res.status(500).send('Failed to send alert');
+  }
+});
+
 
 console.log("Loaded ENV", {
   projectId: process.env.FIREBASE_PROJECT_ID,

@@ -6,7 +6,7 @@ const PHONE_NUMBER = "639668649499";
 const API_KEY = "2570719"; // Your CallMeBot API Key
 const corsHandler = cors({ origin: true });
 // Function to send WhatsApp alert
-async function sendWhatsAppAlert(message) {
+exports.sendWhatsAppAlertRequest = functions.https.onRequest(corsHandler(async (req, res) => {
   const CALLMEBOT_API_URL = `https://api.callmebot.com/whatsapp.php?phone=${PHONE_NUMBER}&text=${encodeURIComponent(message)}&apikey=${API_KEY}`;
 
   try {
@@ -15,7 +15,7 @@ async function sendWhatsAppAlert(message) {
   } catch (error) {
     console.error("Error sending WhatsApp alert:", error.message);
   }
-}
+}));
 
 // Firebase Function to listen for incoming requests to send alerts
 exports.sendWhatsAppAlertRequest = functions.https.onRequest(async (req, res) => {

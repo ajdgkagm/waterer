@@ -88,20 +88,6 @@ const SensorDashboard = () => {
     saveAs(blob, `sensor_data_${startDate}_${endDate}.csv`);
   };
 
-  const sendWhatsAppAlert = async () => {
-    try {
-      const message = encodeURIComponent(
-        `Alert! Sensor data report from ${startDate} to ${endDate} is ready.`
-      );
-      const url = `https://api.callmebot.com/whatsapp.php?phone=${phoneNumber}&text=${message}&apikey=${apiKey}`;
-
-      await fetch(url);
-      alert("WhatsApp alert sent!");
-    } catch (error) {
-      console.error("Error sending WhatsApp alert:", error);
-    }
-  };
-
   const chartData = {
     labels: sensorData.map((entry) => {
       const ts = new Date(entry.timestamp).getTime();

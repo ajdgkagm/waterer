@@ -121,20 +121,20 @@ const Dashboard = () => {
 
     return false; // Don't trigger alert if the custom interval hasn't passed
   };
-
-  const sendWhatsAppAlert = async (message) => {
-    try {
-      await axios.get(
-        `https://api.callmebot.com/whatsapp.php?phone=${PHONE_NUMBER}&text=${encodeURIComponent(
-          message
-        )}&apikey=${API_KEY}`
-      );
-      alert("Alert sent successfully!");
-    } catch (error) {
-      console.error("Failed to send WhatsApp alert", error);
-      alert("Failed to send alert. Check API key or internet connection.");
-    }
-  };
+const sendWhatsAppAlert = async (message) => {
+  try {
+    await axios.get("http://localhost:5000/send-alert", {
+      params: {
+        phone: PHONE_NUMBER,
+        message: message,
+      },
+    });
+    alert("Alert sent successfully!");
+  } catch (error) {
+    console.error("Failed to send WhatsApp alert", error);
+    alert("Failed to send alert. Check server or internet connection.");
+  }
+};
 
   const handleManualAlert = () => {
     sendWhatsAppAlert("🚨 Manual Alert Triggered! Please check the water quality system.");
