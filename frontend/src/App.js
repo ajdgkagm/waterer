@@ -7,15 +7,18 @@ import Notification from "./components/Notification";
 import Login from "./components/Login";
 import LogoutButton from "./components/LogoutButton";
 import Users from "./components/UsersList"; // Users page
-import Preferences from "./components/Preferences";
+import RegisterForm from "./components/Register";
+// import Preferences from "./components/Preferences";
 import ResetPassword from "./components/ResetPassword";
 
 import { monitorSensorAlerts } from "./services/alertServices";
 
 function AppContent() {
   const location = useLocation();
-  const isLoginPage = location.pathname === "/login" || location.pathname === "/reset-password";
-
+  const isLoginPage =
+    location.pathname === "/login" ||
+    location.pathname === "/reset-password" ||
+    location.pathname === "/register"; // <-- Added this
 
   return (
     <div className={isLoginPage ? "no-sidebar" : "app-container flex"}>
@@ -26,7 +29,7 @@ function AppContent() {
           <Route path="/notifications" element={<Notification />} />
           <Route path="/login" element={<Login />} />
           <Route path="/users" element={<Users />} />
-          <Route path="/preferences" element={<Preferences />} />
+          <Route path="/register" element={<RegisterForm />} />
           <Route path="/reset-password" element={<ResetPassword />} />
         </Routes>
       </div>

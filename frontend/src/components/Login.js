@@ -13,8 +13,16 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate("/"); // Redirect after successful login
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      if (!user.emailVerified) {
+        // If the email is not verified, show an error message
+        setError("Please verify your email before logging in.");
+      } else {
+        // Redirect if email is verified
+        navigate("/"); // Redirect after successful login
+      }
     } catch (error) {
       console.error(error.message);
       setError("Invalid credentials. Please try again.");

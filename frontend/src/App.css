@@ -68,16 +68,22 @@ body {
 
 .login-container {
   width: 100%;
-  max-width: 550px; /* Adjust width as needed */
+  height: 100vh; /* Full screen height */
+  display: flex;
+  justify-content: center; /* Center horizontally */
+  align-items: center;     /* Center vertically */
   padding: 2rem;
-  margin-right: 10%; /* Adjust spacing from right */
-  background: url("../public/malvar.jpg") no-repeat center center/cover;
+  /* background-color: #f8f9fa; Optional: light background */
+  /* background: url("../public/malvar.jpg") no-repeat center center/cover; */
 }
+
 .login-box {
-  background: rgba(255, 255, 255, 0.9); /* Slight transparency */
+  background: rgba(255, 255, 255, 0.9);
   padding: 2rem;
   border-radius: 10px;
   box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 550px;
 }
 
 .login-box h2 {

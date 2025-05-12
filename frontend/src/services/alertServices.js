@@ -32,7 +32,10 @@ export const monitorSensorAlerts = () => {
         if (!processedAlertIds.has(docId)) {
           const alertData = change.doc.data();
           console.log("New alert received:", alertData);
-          sendWhatsAppAlert(`🚨 Alert: ${alertData.message}`);
+        const alertMessage = alertData.message.startsWith("🚨 Alert:")
+  ? alertData.message
+  : `🚨 Alert: ${alertData.message}`;
+sendWhatsAppAlert(alertMessage);
           processedAlertIds.add(docId);
         }
       }

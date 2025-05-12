@@ -1,61 +1,92 @@
 import React, { useState } from "react";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+} from "firebase/auth";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 import { auth } from "../context/firebase-config";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { useNavigate } from "react-router-dom";
 
-const Register = () => {
+const RegisterForm = () => {
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [age, setAge] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
 
   const handleRegister = async (e) => {
     e.preventDefault();
+
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      setSuccess(true);
-      setError(null);
-      setEmail("");
-      setPassword("");
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      const db = getFirestore();
+
+      // Save user details to Firestore (without profile picture)
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        email: user.email,
+        name: name,
+        age: age,
+        createdAt: new Date().toISOString(),
+      });
+
+      // Send email verification link to the user
+      await sendEmailVerification(user);
+      alert(
+        "Account created! Please verify your email before logging in."
+      );
+      navigate("/login");
     } catch (error) {
-      setError(error.message);
-      setSuccess(false);
+      console.error("Registration error:", error);
+      alert("Registration failed: " + error.message);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-6 rounded-lg shadow-md w-96">
-        <h2 className="text-2xl font-bold mb-4 text-center">Register</h2>
-        {success && <p className="text-green-500 text-center">Registration successful!</p>}
-        {error && <p className="text-red-500 text-center">{error}</p>}
-        
-        <form onSubmit={handleRegister} className="space-y-4">
+    <div className="login-container">
+      <div className="login-box">
+        <h2>Create Account</h2>
+        <form onSubmit={handleRegister}>
+          <input
+            type="text"
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <input
+            type="number"
+            placeholder="Age"
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+            required
+          />
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full p-2 border rounded"
           />
           <input
             type="password"
-            placeholder="Password"
+            placeholder="Password (min 6 characters)"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full p-2 border rounded"
           />
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-          >
-            Register
-          </button>
+          <button type="submit">Register</button>
         </form>
+        <a href="/login">Already have an account? Login here</a>
       </div>
     </div>
   );
 };
 
-export default Register;
+export default RegisterForm;
