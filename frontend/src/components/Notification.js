@@ -69,7 +69,6 @@ const SensorDashboard = () => {
       console.error("Error fetching Realtime DB data:", error);
     }
   };
-  
 
   const handleExport = () => {
     if (sensorData.length === 0) {
@@ -103,7 +102,7 @@ const SensorDashboard = () => {
       } else if (sensorType === "tds") {
         sensorColor = "rgba(0, 255, 0, 1)"; // Green for tds
       }
-  
+
       return {
         label: `Sensor: ${sensorType}`,
         data: sensorData
@@ -116,27 +115,36 @@ const SensorDashboard = () => {
       };
     }),
   };
-  
 
   return (
-    <div className="dashboard-container">
-      <h3>Select Date Range</h3>
-      <div className="date-picker">
-        <input
-          type="datetime-local"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-        />
-        <input
-          type="datetime-local"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-        />
+    <div className="container my-4">
+      <h3 className="mb-4">Select Date Range</h3>
+      <div className="row mb-4">
+        <div className="col-md-6">
+          <input
+            type="datetime-local"
+            className="form-control"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div className="col-md-6">
+          <input
+            type="datetime-local"
+            className="form-control"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
       </div>
 
-      <div className="sensor-filter">
-        <label>Sensor Type: </label>
-        <select value={sensorType} onChange={(e) => setSensorType(e.target.value)}>
+      <div className="mb-4">
+        <label className="form-label">Sensor Type: </label>
+        <select
+          className="form-select"
+          value={sensorType}
+          onChange={(e) => setSensorType(e.target.value)}
+        >
           <option value="All">All</option>
           {availableSensors.map((sensor, i) => (
             <option key={i} value={sensor}>
@@ -146,11 +154,17 @@ const SensorDashboard = () => {
         </select>
       </div>
 
-      <button onClick={fetchData} className="download-button">Load Data</button>&nbsp;
-      <button onClick={handleExport} className="download-button">Export Data</button>
+      <div className="mb-4">
+        <button onClick={fetchData} className="btn btn-primary me-2">
+          Load Data
+        </button>
+        <button onClick={handleExport} className="btn btn-success">
+          Export Data
+        </button>
+      </div>
 
       <div className="chart-container">
-        <h3>Sensor Data Chart</h3>
+        <h3 className="mb-3">Sensor Data Chart</h3>
         {sensorData.length > 0 ? (
           <Line data={chartData} />
         ) : (
