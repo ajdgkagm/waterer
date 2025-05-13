@@ -4,7 +4,7 @@ import { ref, onValue, set } from "firebase/database";
 import axios from "axios";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
-import "../App.css";
+import "bootstrap/dist/css/bootstrap.min.css";
 
 const Dashboard = () => {
   const [sensorData, setSensorData] = useState([]);
@@ -18,7 +18,6 @@ const Dashboard = () => {
   const [modalMessage, setModalMessage] = useState("");
   const [lastAlertTime, setLastAlertTime] = useState(null);
   const [saveStatus, setSaveStatus] = useState("");
-  const [showToast, setShowToast] = useState(false); // New state for toast
 
   const PHONE_NUMBER = "639668649499";
   const API_KEY = "2570719";
@@ -27,20 +26,16 @@ const Dashboard = () => {
     const thresholdsRef = ref(database, "thresholds");
     const unsubscribe = onValue(thresholdsRef, (snapshot) => {
       const thresholdsData = snapshot.val();
-      if (thresholdsData) {
-        setThresholds(thresholdsData);
-      }
+      if (thresholdsData) setThresholds(thresholdsData);
     });
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     const dataRef = ref(database, "sensor_data");
-
     const unsubscribeData = onValue(dataRef, (snapshot) => {
       const rawData = snapshot.val();
       if (!rawData) return;
-
       const mergedData = {};
 
       ["ph", "ntu", "tds"].forEach((type) => {
@@ -48,24 +43,16 @@ const Dashboard = () => {
           Object.values(rawData[type]).forEach((entry) => {
             if (!entry || !entry.timestamp) return;
             const ts = entry.timestamp;
-            if (!mergedData[ts]) {
-              mergedData[ts] = { timestamp: new Date(ts) };
-            }
+            if (!mergedData[ts]) mergedData[ts] = { timestamp: new Date(ts) };
             mergedData[ts][type] = entry.value ?? null;
           });
         }
       });
 
-      const sortedData = Object.values(mergedData).sort(
-        (a, b) => a.timestamp - b.timestamp
-      );
-
+      const sortedData = Object.values(mergedData).sort((a, b) => a.timestamp - b.timestamp);
       setSensorData(sortedData.slice(-20));
 
-      let latestPh = null;
-      let latestNtu = null;
-      let latestTds = null;
-
+      let latestPh = null, latestNtu = null, latestTds = null;
       for (let i = sortedData.length - 1; i >= 0; i--) {
         const item = sortedData[i];
         if (latestPh === null && item.ph != null) latestPh = item.ph;
@@ -82,23 +69,19 @@ const Dashboard = () => {
 
   const checkThresholds = (latestData) => {
     if (!latestData) return;
-
     const { ph, ntu, tds } = latestData;
     let message = "";
 
     if (ntu > thresholds.customNtuThreshold) {
-      message += `⚠️ NTU Alert: Current level is ${ntu}, which is above the threshold (${thresholds.customNtuThreshold}).\n`;
-      message += `Solution: Kindly examine the settling tank and assess the sludge percentage.\n\n`;
+      message += `⚠️ NTU Alert: ${ntu} (Threshold: ${thresholds.customNtuThreshold})\nSolution: Examine the settling tank.\n\n`;
     }
 
     if (ph > thresholds.customPhThreshold) {
-      message += `⚠️ pH Alert: Current pH level is ${ph}, which is above the threshold (${thresholds.customPhThreshold}).\n`;
-      message += `Solution: Kindly look over the chlorine tank and add chlorine to balance the pH level.\n\n`;
+      message += `⚠️ pH Alert: ${ph} (Threshold: ${thresholds.customPhThreshold})\nSolution: Add chlorine.\n\n`;
     }
 
     if (tds > thresholds.customTdsThreshold) {
-      message += `⚠️ TDS Alert: Current level is ${tds}, which is above the threshold (${thresholds.customTdsThreshold}).\n`;
-      message += `Solution: Kindly inspect the coagulant tank to ensure that polyaluminum carbon (PAC) is being added to neutralize the water.\n\n`;
+      message += `⚠️ TDS Alert: ${tds} (Threshold: ${thresholds.customTdsThreshold})\nSolution: Check coagulant tank (PAC).\n\n`;
     }
 
     if (message && shouldTriggerAlert()) {
@@ -111,12 +94,10 @@ const Dashboard = () => {
   const shouldTriggerAlert = () => {
     const now = new Date().getTime();
     const interval = thresholds.customAlertInterval * 60 * 1000;
-
     if (!lastAlertTime || now - lastAlertTime >= interval) {
       setLastAlertTime(now);
       return true;
     }
-
     return false;
   };
 
@@ -130,27 +111,22 @@ const Dashboard = () => {
           message: messageWithTimestamp,
         },
       });
-      setShowToast(true); // Show toast when the alert is sent
+      alert("Alert sent successfully!");
     } catch (error) {
       console.error("Failed to send WhatsApp alert", error);
-      alert("Failed to send alert. Check server or internet connection.");
+      alert("Failed to send alert.");
     }
   };
 
   const handleManualAlert = () => {
-    sendWhatsAppAlert(
-      "🚨 Manual Alert Triggered! Please check the water quality system."
-    );
+    sendWhatsAppAlert("🚨 Manual Alert Triggered! Please check the water quality system.");
   };
 
   const closeModal = () => setShowModal(false);
 
-  const handleThresholdChange = (event, thresholdType) => {
+  const handleThresholdChange = (event, type) => {
     const value = event.target.value;
-    setThresholds((prevState) => ({
-      ...prevState,
-      [thresholdType]: value,
-    }));
+    setThresholds((prev) => ({ ...prev, [type]: value }));
   };
 
   const saveThresholds = async () => {
@@ -165,143 +141,97 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="dashboard-container container mt-4">
-      <h2 className="text-center mb-4">Real-Time Water Quality Monitoring</h2>
+    <div className="container py-4">
+      <h2 className="mb-4">Real-Time Water Quality Monitoring</h2>
 
-      {/* Bootstrap Threshold Settings */}
-      <div className="row justify-content-center">
-        <div className="col-md-6">
-          <div className="mb-3">
-            <label className="form-label">Set Custom TDS Threshold</label>
-            <input
-              type="number"
-              className="form-control"
-              value={thresholds.customTdsThreshold}
-              onChange={(e) => handleThresholdChange(e, "customTdsThreshold")}
-              min="0"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label">Set Custom pH Threshold</label>
-            <input
-              type="number"
-              className="form-control"
-              value={thresholds.customPhThreshold}
-              onChange={(e) => handleThresholdChange(e, "customPhThreshold")}
-              min="0"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label">Set Custom NTU Threshold</label>
-            <input
-              type="number"
-              className="form-control"
-              value={thresholds.customNtuThreshold}
-              onChange={(e) => handleThresholdChange(e, "customNtuThreshold")}
-              min="0"
-            />
-          </div>
-
-          <div className="mb-3">
-            <label className="form-label">Set Custom Alert Interval (minutes)</label>
-            <input
-              type="number"
-              className="form-control"
-              value={thresholds.customAlertInterval}
-              onChange={(e) => handleThresholdChange(e, "customAlertInterval")}
-              min="1"
-            />
-          </div>
-
-          <div className="d-grid mb-2">
-            <button onClick={saveThresholds} className="btn btn-danger">
+      {/* Threshold Settings */}
+      <div className="card mb-4">
+        <div className="card-header">Custom Threshold Settings</div>
+        <div className="card-body row g-3">
+          {[
+            { label: "TDS", key: "customTdsThreshold" },
+            { label: "pH", key: "customPhThreshold" },
+            { label: "NTU", key: "customNtuThreshold" },
+            { label: "Alert Interval (min)", key: "customAlertInterval" },
+          ].map(({ label, key }) => (
+            <div key={key} className="col-md-3">
+              <label className="form-label">{label}</label>
+              <input
+                type="number"
+                className="form-control"
+                value={thresholds[key]}
+                onChange={(e) => handleThresholdChange(e, key)}
+                min="0"
+              />
+            </div>
+          ))}
+          <div className="col-12">
+            <button onClick={saveThresholds} className="btn btn-primary me-3">
               Save Thresholds
             </button>
+            {saveStatus && <span className="text-success">{saveStatus}</span>}
           </div>
-          {saveStatus && <div className="alert alert-info">{saveStatus}</div>}
         </div>
       </div>
 
-      {/* Chart for Sensor Data */}
-      <div className="my-5">
-        <Line
-          data={{
-            labels: sensorData.map((data) =>
-              data.timestamp.toLocaleTimeString()
-            ),
-            datasets: [
-              {
-                label: "NTU Level",
-                data: sensorData.map((data) => data.ntu),
-                borderColor: "blue",
-                backgroundColor: "blue",
-                fill: false,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-              },
-              {
-                label: "PH Water Level",
-                data: sensorData.map((data) => data.ph),
-                borderColor: "red",
-                backgroundColor: "red",
-                fill: false,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-              },
-              {
-                label: "TDS",
-                data: sensorData.map((data) => data.tds),
-                borderColor: "green",
-                backgroundColor: "green",
-                fill: false,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-              },
-            ],
-          }}
-        />
+      {/* Chart */}
+      <div className="card mb-4">
+        <div className="card-header">Sensor Data Chart</div>
+        <div className="card-body">
+          <Line
+            data={{
+              labels: sensorData.map((d) => d.timestamp.toLocaleTimeString()),
+              datasets: [
+                {
+                  label: "NTU",
+                  data: sensorData.map((d) => d.ntu),
+                  borderColor: "blue",
+                  backgroundColor: "blue",
+                  fill: false,
+                },
+                {
+                  label: "pH",
+                  data: sensorData.map((d) => d.ph),
+                  borderColor: "red",
+                  backgroundColor: "red",
+                  fill: false,
+                },
+                {
+                  label: "TDS",
+                  data: sensorData.map((d) => d.tds),
+                  borderColor: "green",
+                  backgroundColor: "green",
+                  fill: false,
+                },
+              ],
+            }}
+          />
+        </div>
       </div>
 
       {/* Alert Button */}
       <div className="text-center mb-4">
-        <button onClick={handleManualAlert} className="btn btn-warning">
-          🚨 Send Alert
+        <button onClick={handleManualAlert} className="btn btn-danger btn-lg">
+          🚨 Send Manual Alert
         </button>
       </div>
 
-      {/* Toast Notification */}
-      {showToast && (
-        <div
-          className="toast show position-fixed bottom-0 end-0 m-3"
-          role="alert"
-          aria-live="assertive"
-          aria-atomic="true"
-        >
-          <div className="toast-header">
-            <strong className="me-auto">Alert Sent</strong>
-            <button
-              type="button"
-              className="btn-close"
-              onClick={() => setShowToast(false)}
-              aria-label="Close"
-            ></button>
-          </div>
-          <div className="toast-body">
-            The alert was sent successfully.
-          </div>
-        </div>
-      )}
-
       {/* Modal */}
       {showModal && (
-        <div className="modal-overlay">
-          <div className="custom-modal">
-            <p>{modalMessage}</p>
-            <button className="btn btn-secondary mt-2" onClick={closeModal}>
-              Close
-            </button>
+        <div className="modal show d-block" tabIndex="-1">
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">⚠️ Alert Notification</h5>
+                <button type="button" className="btn-close" onClick={closeModal}></button>
+              </div>
+              <div className="modal-body">
+                <pre>{modalMessage}</pre>
+              </div>
+              <div className="modal-footer">
+                <button className="btn btn-secondary" onClick={closeModal}>Close</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
