@@ -435,3 +435,52 @@ body {
   border-radius: 8px;
   text-align: center;
 }
+
+
+.dashboard-container {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.custom-thresholds label {
+  display: block;
+  margin: 10px 0;
+}
+
+.custom-alert-button {
+  background-color: #dc3545; /* Bootstrap red */
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+.custom-alert-button:hover {
+  background-color: #c82333;
+}
+
+/* Fix for modal conflicts with Bootstrap */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1050; /* Bootstrap modals use 1050 */
+}
+
+.custom-modal {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 10px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}

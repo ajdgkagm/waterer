@@ -4,6 +4,7 @@ import { getFirestore, doc, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { auth } from "../context/firebase-config";
 
+
 const UserProfile = () => {
   const [user, setUser] = useState(null);
   const [userData, setUserData] = useState(null);
@@ -15,8 +16,6 @@ const UserProfile = () => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
-
-        // Fetch user data from Firestore
         const db = getFirestore();
         const userDoc = await getDoc(doc(db, "users", currentUser.uid));
 
@@ -26,52 +25,66 @@ const UserProfile = () => {
           setStatus("User data not found in Firestore.");
         }
       } else {
-        // Redirect if no user is logged in
         navigate("/login");
       }
       setLoading(false);
     });
 
-    return () => unsubscribe(); // Cleanup subscription
+    return () => unsubscribe();
   }, [navigate]);
 
   const handleResetPassword = async () => {
     if (!user?.email) return;
     try {
       await sendPasswordResetEmail(auth, user.email);
-      setStatus("Password reset email sent!");
+      setStatus("✅ Password reset email sent!");
     } catch (error) {
       console.error("Error sending reset email:", error);
-      setStatus("Failed to send reset email.");
+      setStatus("❌ Failed to send reset email.");
     }
   };
 
   return (
-    <div className="profile-container">
-      <h2>User Profile</h2>
+    <div className="container mt-5">
+      <h2 className="text-center mb-4">User Profile</h2>
+
       {loading ? (
-        <div className="loading-spinner">Loading...</div>
-      ) : user ? (
-        <div className="profile-card">
-          <div className="profile-header">
-            <h3>Welcome, {userData ? userData.name : "User"}</h3>
-            <p>Email: {user.email}</p>
+        <div className="d-flex justify-content-center align-items-center">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
           </div>
-          {userData ? (
-            <div className="user-info">
-              <p><strong>Name:</strong> {userData.name}</p>
-              <p><strong>Age:</strong> {userData.age}</p>
+        </div>
+      ) : user ? (
+        <div className="card shadow mx-auto" style={{ maxWidth: "500px" }}>
+          <div className="card-header bg-primary text-white text-center">
+            <h4>Welcome, {userData ? userData.name : "User"}</h4>
+          </div>
+          <div className="card-body">
+            <p><strong>Email:</strong> {user.email}</p>
+            {userData ? (
+              <>
+                <p><strong>Name:</strong> {userData.name}</p>
+                <p><strong>Age:</strong> {userData.age}</p>
+              </>
+            ) : (
+              <p className="text-muted">No additional data found.</p>
+            )}
+            <div className="d-grid mt-3">
+              <button className="btn btn-outline-primary" onClick={handleResetPassword}>
+                Send Password Reset Email
+              </button>
             </div>
-          ) : (
-            <p>No additional data found.</p>
-          )}
-          <button onClick={handleResetPassword} className="reset-button">
-            Send Password Reset Email
-          </button>
-          {status && <p className="status-message">{status}</p>}
+            {status && (
+              <div className="alert alert-info mt-3 mb-0 text-center" role="alert">
+                {status}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
-        <p>No user found.</p>
+        <div className="alert alert-warning text-center">
+          No user found.
+        </div>
       )}
     </div>
   );
