@@ -18,6 +18,7 @@ const Dashboard = () => {
   const [modalMessage, setModalMessage] = useState("");
   const [lastAlertTime, setLastAlertTime] = useState(null);
   const [saveStatus, setSaveStatus] = useState("");
+  const [showToast, setShowToast] = useState(false); // New state for toast
 
   const PHONE_NUMBER = "639668649499";
   const API_KEY = "2570719";
@@ -129,7 +130,7 @@ const Dashboard = () => {
           message: messageWithTimestamp,
         },
       });
-      alert("Alert sent successfully!");
+      setShowToast(true); // Show toast when the alert is sent
     } catch (error) {
       console.error("Failed to send WhatsApp alert", error);
       alert("Failed to send alert. Check server or internet connection.");
@@ -269,6 +270,29 @@ const Dashboard = () => {
           🚨 Send Alert
         </button>
       </div>
+
+      {/* Toast Notification */}
+      {showToast && (
+        <div
+          className="toast show position-fixed bottom-0 end-0 m-3"
+          role="alert"
+          aria-live="assertive"
+          aria-atomic="true"
+        >
+          <div className="toast-header">
+            <strong className="me-auto">Alert Sent</strong>
+            <button
+              type="button"
+              className="btn-close"
+              onClick={() => setShowToast(false)}
+              aria-label="Close"
+            ></button>
+          </div>
+          <div className="toast-body">
+            The alert was sent successfully.
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {showModal && (
