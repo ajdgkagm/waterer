@@ -16,13 +16,20 @@ const API_KEY = "2570719"; // CallMeBot API key
 async function sendWhatsAppAlert(message) {
   const url = `https://api.callmebot.com/whatsapp.php?phone=${PHONE_NUMBER}&text=${encodeURIComponent(message)}&apikey=${API_KEY}`;
   try {
-    await axios.get(url, { timeout: 10000 });
+    const response = await axios.get(url, { timeout: 10000 });
     console.log("WhatsApp alert sent:", message);
+    console.log("CallMeBot response:", response.data);
   } catch (error) {
-    console.error("Error sending alert:", error.message);
+    if (error.response) {
+      console.error("CallMeBot API error:", {
+        status: error.response.status,
+        data: error.response.data,
+      });
+    } else {
+      console.error("Error sending alert:", error.message);
+    }
   }
 }
-
 /**
  * Firebase function triggered on write to Firestore `sensor_data` collection.
  * It checks if the pH or turbidity levels exceed set thresholds, and sends an alert if necessary.
