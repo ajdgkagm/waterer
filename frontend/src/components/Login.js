@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { auth } from "../context/firebase-config";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { Link, useNavigate } from "react-router-dom";
-import "../App.css"; // Import CSS file
+import "../App.css";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -13,25 +13,44 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate("/"); // Redirect to dashboard after login
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      if (!user.emailVerified) {
+        // If the email is not verified, show an error message
+        setError("Please verify your email before logging in.");
+      } else {
+        // Redirect if email is verified
+        navigate("/"); // Redirect after successful login
+      }
     } catch (error) {
+      console.error(error.message);
       setError("Invalid credentials. Please try again.");
     }
   };
 
   return (
     <div className="login-container">
-    <div className="login-box">
-      <h2>Login</h2>
-      <input type="email" placeholder="Email" />
-      <input type="password" placeholder="Password" />
-      <button>Login</button>
-      <a href="/register">Create an account</a>
-      <a href="/reset-password">Forgot Password?</a>
+      <div className="login-box">
+        <h2>Login</h2>
+        {error && <p style={{ color: "red" }}>{error}</p>}
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <button onClick={handleLogin}>Login</button>
+        <Link to="/register">Create an account</Link>
+        <Link to="/reset-password">Forgot Password?</Link>
+      </div>
     </div>
-  </div>
-  
   );
 }
 

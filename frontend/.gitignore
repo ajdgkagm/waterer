@@ -7,7 +7,7 @@
 
 # testing
 /coverage
-
+backend/*.json
 # production
 /build
 

@@ -1,0 +1,105 @@
+
+/* Profile container */
+.profile-container {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-family: Arial, sans-serif;
+}
+
+/* Header */
+.profile-container h2 {
+  text-align: center;
+  color: #333;
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+/* Profile Card */
+.profile-card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Profile Header */
+.profile-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.profile-header h3 {
+  color: #4caf50;
+  font-size: 24px;
+}
+
+.profile-header p {
+  color: #777;
+  font-size: 16px;
+}
+
+/* User Info */
+.user-info {
+  margin-bottom: 20px;
+}
+
+.user-info p {
+  font-size: 16px;
+  color: #333;
+}
+
+strong {
+  font-weight: bold;
+}
+
+/* Reset Button */
+.reset-button {
+  width: 100%;
+  padding: 12px 0;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.reset-button:hover {
+  background-color: #0056b3;
+}
+
+/* Status Message */
+.status-message {
+  margin-top: 20px;
+  font-size: 16px;
+  color: #4caf50;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  text-align: center;
+  font-size: 18px;
+  color: #888;
+  margin-top: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .profile-container {
+    padding: 15px;
+    margin: 10px;
+  }
+  
+  .profile-card {
+    padding: 15px;
+  }
+
+  .profile-header h3 {
+    font-size: 22px;
+  }
+}

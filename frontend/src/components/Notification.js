@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { saveAs } from "file-saver";
-import { collection, getDocs, query, where } from "firebase/firestore";
-import { db } from "../context/firebase-config";
+import { getDatabase, ref, get, child } from "firebase/database";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
 
@@ -9,36 +8,65 @@ const SensorDashboard = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [sensorData, setSensorData] = useState([]);
-  const phoneNumber = "639668649499"; // Replace with your number
-  const apiKey = "2570719"; // Replace with your CallMeBot API Key
+  const [sensorType, setSensorType] = useState("All");
+  const [availableSensors, setAvailableSensors] = useState([]);
+
+  const phoneNumber = "639668649499";
+  const apiKey = "2570719";
 
   const fetchData = async () => {
     if (!startDate || !endDate) {
       alert("Please select a valid date range.");
       return;
     }
-
+  
     try {
-      const startTimestamp = new Date(startDate).getTime();
-      const endTimestamp = new Date(endDate).getTime();
-
-      // Query Firebase for the selected date range
-      const q = query(
-        collection(db, "sensorData"),
-        where("timestamp", ">=", startTimestamp),
-        where("timestamp", "<=", endTimestamp)
-      );
-
-      const querySnapshot = await getDocs(q);
-      let data = [];
-
-      querySnapshot.forEach((doc) => {
-        data.push(doc.data());
-      });
-
-      setSensorData(data);
+      const db = getDatabase();
+      const dbRef = ref(db);
+      const snapshot = await get(child(dbRef, "sensor_data"));
+  
+      if (snapshot.exists()) {
+        const sensorDataByType = snapshot.val();
+        const start = new Date(startDate).getTime();
+        const end = new Date(endDate).getTime();
+  
+        let allData = [];
+  
+        // Loop through all sensor types and entries
+        for (const sensorType in sensorDataByType) {
+          const entries = sensorDataByType[sensorType];
+          for (const key in entries) {
+            const { timestamp, value } = entries[key];
+            const time = new Date(timestamp).getTime();
+  
+            if (time >= start && time <= end) {
+              allData.push({
+                timestamp,
+                value,
+                sensor: sensorType
+              });
+            }
+          }
+        }
+  
+        allData.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  
+        // Extract unique sensor types (should include ntu, ph, tds)
+        const sensors = [...new Set(allData.map((d) => d.sensor || "Unknown"))];
+        setAvailableSensors(sensors);
+  
+        // Filter based on selected sensor type
+        const filtered = sensorType === "All"
+          ? allData
+          : allData.filter((d) => d.sensor === sensorType);
+  
+        setSensorData(filtered);
+      } else {
+        setSensorData([]);
+        setAvailableSensors([]);
+      }
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Error fetching Realtime DB data:", error);
     }
   };
 
@@ -51,80 +79,92 @@ const SensorDashboard = () => {
     let csvContent = "data:text/csv;charset=utf-8,Time,Sensor,Value\n";
 
     sensorData.forEach(({ timestamp, sensor, value }) => {
-      csvContent += `${new Date(timestamp).toLocaleString()},${sensor},${value}\n`;
+      const timeString = new Date(timestamp).toLocaleString();
+      csvContent += `${timeString},${sensor || "N/A"},${value}\n`;
     });
 
     const blob = new Blob([csvContent], { type: "text/csv" });
     saveAs(blob, `sensor_data_${startDate}_${endDate}.csv`);
   };
 
-  const sendWhatsAppAlert = async () => {
-    if (!startDate || !endDate) {
-      alert("Please select a valid date range.");
-      return;
-    }
-
-    try {
-      const message = encodeURIComponent(
-        `Alert! Sensor data report from ${startDate} to ${endDate} is ready.`
-      );
-      const url = `https://api.callmebot.com/whatsapp.php?phone=${phoneNumber}&text=${message}&apikey=${apiKey}`;
-
-      await fetch(url);
-      alert("WhatsApp alert sent!");
-    } catch (error) {
-      console.error("Error sending WhatsApp alert:", error);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [startDate, endDate]);
-
-  // Prepare Chart Data
   const chartData = {
-    labels: sensorData.map(({ timestamp }) =>
-      new Date(timestamp).toLocaleTimeString()
-    ),
-    datasets: [
-      {
-        label: "Sensor Values",
-        data: sensorData.map(({ value }) => value),
+    labels: sensorData.map((entry) => {
+      const ts = new Date(entry.timestamp).getTime();
+      return new Date(ts).toLocaleString();
+    }),
+    datasets: availableSensors.map((sensorType) => {
+      // Set colors based on sensor type
+      let sensorColor = "";
+      if (sensorType === "ntu") {
+        sensorColor = "rgba(0, 123, 255, 1)"; // Blue for ntu
+      } else if (sensorType === "ph") {
+        sensorColor = "rgba(255, 0, 0, 1)"; // Red for ph
+      } else if (sensorType === "tds") {
+        sensorColor = "rgba(0, 255, 0, 1)"; // Green for tds
+      }
+
+      return {
+        label: `Sensor: ${sensorType}`,
+        data: sensorData
+          .filter((entry) => entry.sensor === sensorType)
+          .map((entry) => entry.value),
         fill: false,
-        backgroundColor: "rgba(0, 123, 255, 0.6)",
-        borderColor: "rgba(0, 123, 255, 1)",
+        backgroundColor: sensorColor, // Set the background color for the chart line
+        borderColor: sensorColor, // Set the border color for the chart line
         tension: 0.3,
-      },
-    ],
+      };
+    }),
   };
 
   return (
-    <div className="dashboard-container">
-      <h3>Select Date Range</h3>
-      <div className="date-picker">
-        <input
-          type="datetime-local"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-        />
-        <input
-          type="datetime-local"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-        />
+    <div className="container my-4">
+      <h3 className="mb-4">Select Date Range</h3>
+      <div className="row mb-4">
+        <div className="col-md-6">
+          <input
+            type="datetime-local"
+            className="form-control"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div className="col-md-6">
+          <input
+            type="datetime-local"
+            className="form-control"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
       </div>
-      <button onClick={fetchData} className="fetch-button">
-        Load Data
-      </button>
-      <button onClick={handleExport} className="export-button">
-        Download CSV
-      </button>
-      <button onClick={sendWhatsAppAlert} className="alert-button">
-        Send WhatsApp Alert
-      </button>
+
+      <div className="mb-4">
+        <label className="form-label">Sensor Type: </label>
+        <select
+          className="form-select"
+          value={sensorType}
+          onChange={(e) => setSensorType(e.target.value)}
+        >
+          <option value="All">All</option>
+          {availableSensors.map((sensor, i) => (
+            <option key={i} value={sensor}>
+              {sensor}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-4">
+        <button onClick={fetchData} className="btn btn-primary me-2">
+          Load Data
+        </button>
+        <button onClick={handleExport} className="btn btn-success">
+          Export Data
+        </button>
+      </div>
 
       <div className="chart-container">
-        <h3>Sensor Data Chart</h3>
+        <h3 className="mb-3">Sensor Data Chart</h3>
         {sensorData.length > 0 ? (
           <Line data={chartData} />
         ) : (

@@ -9,7 +9,7 @@ import { Link } from "react-router-dom";
 import LogoutButton from "./LogoutButton";
 export const SidebarData = [
     {
-        title: "Home",
+        title: "Dashboard",
         icon: <HomeIcon />,
         link: "/"
     },
@@ -19,20 +19,11 @@ export const SidebarData = [
         link: "/users"
     },
     {
-        title: "Chart",
+        title: "Chart Data",
         icon: <NotificationsIcon />,
         link: "/notifications"
     },
-    {
-        title: "Dashboard",
-        icon: <InfoIcon />,
-        link: "/dashboard"
-    },
-    {
-        title: "Preferences",
-        icon: <InfoIcon />,
-        link: "/preferences"
-    },
+
     {
         title: <LogoutButton/>,
         // icon: <LogoutButton />,
