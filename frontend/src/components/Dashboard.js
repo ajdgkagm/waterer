@@ -22,23 +22,20 @@ const Dashboard = () => {
   const [latestSensorValues, setLatestSensorValues] = useState(null);
   const [smsLimitAlert, setSmsLimitAlert] = useState(false);
 
-
-
   const PHONE_NUMBER = "639668649499";
   const API_KEY = "2570719";
 
   useEffect(() => {
     const thresholdsRef = ref(database, "thresholds");
-    const unsubscribe = onValue(thresholdsRef, (snapshot) => {
+    return onValue(thresholdsRef, (snapshot) => {
       const thresholdsData = snapshot.val();
       if (thresholdsData) setThresholds(thresholdsData);
     });
-    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     const dataRef = ref(database, "sensor_data");
-    const unsubscribeData = onValue(dataRef, (snapshot) => {
+    return onValue(dataRef, (snapshot) => {
       const rawData = snapshot.val();
       if (!rawData) return;
       const mergedData = {};
@@ -58,34 +55,28 @@ const Dashboard = () => {
       setSensorData(sortedData.slice(-20));
 
       let latestPh = null, latestNtu = null, latestTds = null;
-     for (let i = sortedData.length - 1; i >= 0; i--) {
-  const item = sortedData[i];
-  if (latestPh === null && item.ph != null) latestPh = item.ph;
-  if (latestNtu === null && item.ntu != null) latestNtu = item.ntu;
-  if (latestTds === null && item.tds != null) latestTds = item.tds;
-  if (latestPh && latestNtu && latestTds) break;
-}
+      for (let i = sortedData.length - 1; i >= 0; i--) {
+        const item = sortedData[i];
+        if (latestPh === null && item.ph != null) latestPh = item.ph;
+        if (latestNtu === null && item.ntu != null) latestNtu = item.ntu;
+        if (latestTds === null && item.tds != null) latestTds = item.tds;
+        if (latestPh && latestNtu && latestTds) break;
+      }
 
-const latestValues = { ph: latestPh, ntu: latestNtu, tds: latestTds };
-setLatestSensorValues(latestValues); // ✅ store them
-checkThresholds(latestValues);
+      const latestValues = { ph: latestPh, ntu: latestNtu, tds: latestTds };
+      setLatestSensorValues(latestValues);
+      checkThresholds(latestValues);
     });
-
-    return () => unsubscribeData();
   }, []);
 
   useEffect(() => {
-  if (!latestSensorValues) return;
-
-  const intervalMs = thresholds.customAlertInterval * 60 * 1000;
-
-  const intervalId = setInterval(() => {
-    checkThresholds(latestSensorValues); // Re-check thresholds even without new sensor data
-  }, intervalMs);
-
-  return () => clearInterval(intervalId);
-}, [latestSensorValues, thresholds.customAlertInterval]);
-
+    if (!latestSensorValues) return;
+    const intervalMs = thresholds.customAlertInterval * 60 * 1000;
+    const intervalId = setInterval(() => {
+      checkThresholds(latestSensorValues);
+    }, intervalMs);
+    return () => clearInterval(intervalId);
+  }, [latestSensorValues, thresholds.customAlertInterval]);
 
   const checkThresholds = (latestData) => {
     if (!latestData) return;
@@ -95,25 +86,19 @@ checkThresholds(latestValues);
     if (ntu > thresholds.customNtuThreshold) {
       message += `⚠️ NTU Alert: ${ntu} (Threshold: ${thresholds.customNtuThreshold})\nSolution: Examine the settling tank.\n\n`;
     }
-
     if (ph > thresholds.customPhThreshold) {
       message += `⚠️ pH Alert: ${ph} (Threshold: ${thresholds.customPhThreshold})\nSolution: Add chlorine.\n\n`;
     }
-
     if (tds > thresholds.customTdsThreshold) {
       message += `⚠️ TDS Alert: ${tds} (Threshold: ${thresholds.customTdsThreshold})\nSolution: Check coagulant tank (PAC).\n\n`;
     }
 
     if (message && shouldTriggerAlert()) {
-      setAlertMessage(message.trim());  // Display in Alert
-      setToastMessage(message.trim());  // Display in Toast
-      setShowToast(true);  // Show Toast
+      setAlertMessage(message.trim());
+      setToastMessage(message.trim());
+      setShowToast(true);
       sendWhatsAppAlert(message.trim());
-
-      // Automatically hide the toast after 5 seconds
-      setTimeout(() => {
-        setShowToast(false);
-      }, 5000);
+      setTimeout(() => setShowToast(false), 5000);
     }
   };
 
@@ -127,39 +112,34 @@ checkThresholds(latestValues);
     return false;
   };
 
- const sendWhatsAppAlert = async (message) => {
-  try {
-    const timestamp = new Date().toLocaleString();
-    const messageWithTimestamp = `${message}\n\nAlert Timestamp: ${timestamp}`;
+  const sendWhatsAppAlert = async (message) => {
+    try {
+      const timestamp = new Date().toLocaleString();
+      const messageWithTimestamp = `${message}\n\nAlert Timestamp: ${timestamp}`;
 
-    const response = await axios.get("http://localhost:5000/send-alert", {
-      params: {
-        phone: PHONE_NUMBER,
-        message: messageWithTimestamp,
-      },
-    });
+      const response = await axios.get("http://localhost:5000/send-alert", {
+        params: {
+          phone: PHONE_NUMBER,
+          message: messageWithTimestamp,
+        },
+      });
 
-    const responseText = response.data;
-
-    if (typeof responseText === 'string' && (
-      responseText.includes("You have 0 messages left") ||
-      responseText.includes("Please, subscribe")
-    )) {
-      setSmsLimitAlert(true);
-      // Auto-hide after 6 seconds
-      setTimeout(() => setSmsLimitAlert(false), 6000);
+      const responseText = response.data;
+      if (typeof responseText === 'string' && (
+        responseText.includes("You have 0 messages left") ||
+        responseText.includes("Please, subscribe")
+      )) {
+        setSmsLimitAlert(true);
+        setTimeout(() => setSmsLimitAlert(false), 6000);
+      }
+    } catch (error) {
+      console.error("Failed to send WhatsApp alert", error);
+      setAlertMessage("❌ Failed to send WhatsApp alert. Check server or internet.");
+      setToastMessage("❌ WhatsApp alert failed.");
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 5000);
     }
-
-  } catch (error) {
-    console.error("Failed to send WhatsApp alert", error);
-    setAlertMessage("❌ Failed to send WhatsApp alert. Check server or internet.");
-    setToastMessage("❌ WhatsApp alert failed.");
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 5000);
-  }
-};
-
-
+  };
 
   const handleManualAlert = () => {
     sendWhatsAppAlert("🚨 Manual Alert Triggered! Please check the water quality system.");
@@ -169,28 +149,23 @@ checkThresholds(latestValues);
     const value = event.target.value;
     setThresholds((prev) => ({ ...prev, [type]: value }));
   };
-const saveThresholds = async () => {
-  try {
-    const thresholdsRef = ref(database, "thresholds");
-    await set(thresholdsRef, thresholds);
-    setSaveStatus("Thresholds saved successfully!");
 
-    // Auto-clear after 3 seconds
-    setTimeout(() => {
-      setSaveStatus("");
-    }, 3000);
-
-  } catch (error) {
-    console.error("Error saving thresholds:", error);
-    setSaveStatus("Failed to save thresholds.");
-  }
-};
+  const saveThresholds = async () => {
+    try {
+      const thresholdsRef = ref(database, "thresholds");
+      await set(thresholdsRef, thresholds);
+      setSaveStatus("Thresholds saved successfully!");
+      setTimeout(() => setSaveStatus(""), 3000);
+    } catch (error) {
+      console.error("Error saving thresholds:", error);
+      setSaveStatus("Failed to save thresholds.");
+    }
+  };
 
   return (
     <div className="container py-4">
       <h2 className="mb-4">Real-Time Water Quality Monitoring</h2>
 
-      {/* Threshold Settings */}
       <div className="card mb-4">
         <div className="card-header">Custom Threshold Settings</div>
         <div className="card-body row g-3">
@@ -215,7 +190,6 @@ const saveThresholds = async () => {
         </div>
       </div>
 
-      {/* Chart */}
       <div className="card mb-8">
         <div className="card-header">Sensor Data Chart</div>
         <div className="card-body">
@@ -249,26 +223,19 @@ const saveThresholds = async () => {
           />
         </div>
       </div>
-            <br></br>
-      {/* Manual Alert Button */}
+
+      <br />
       <div className="text-center mb-4">
         <button onClick={handleManualAlert} className="btn btn-danger btn-lg">
           🚨 Send Manual Alert
         </button>
       </div>
 
-      {/* Bootstrap Alert for displaying message */}
       {alertMessage && (
         <div
           className="alert alert-danger alert-dismissible fade show position-fixed top-50 start-50 translate-middle-x w-75 z-index-1050"
           role="alert"
-          style={{
-            zIndex: 1050,
-            maxWidth: '600px',
-            textAlign: 'center',
-            borderRadius: '10px',
-            padding: '20px',
-          }}
+          style={{ zIndex: 1050, maxWidth: '600px', textAlign: 'center', borderRadius: '10px', padding: '20px' }}
         >
           <strong>Warning!</strong> {alertMessage}
           <button
@@ -280,23 +247,17 @@ const saveThresholds = async () => {
           ></button>
         </div>
       )}
-      {smsLimitAlert && (
-  <div
-    className="alert alert-warning position-fixed top-0 end-0 m-4 shadow"
-    role="alert"
-    style={{
-      zIndex: 1060,
-      maxWidth: '300px',
-      textAlign: 'center',
-      borderRadius: '10px',
-      padding: '15px',
-    }}
-  >
-    🚫 All free CallMeBot messages used. WhatsApp alerts disabled.
-  </div>
-)}
 
-      {/* Bootstrap Toast for Alert */}
+      {smsLimitAlert && (
+        <div
+          className="alert alert-warning position-fixed top-0 end-0 m-4 shadow"
+          role="alert"
+          style={{ zIndex: 1060, maxWidth: '300px', textAlign: 'center', borderRadius: '10px', padding: '15px' }}
+        >
+          🚫 All free CallMeBot messages used. WhatsApp alerts disabled.
+        </div>
+      )}
+
       {showToast && (
         <div
           className="toast align-items-center text-bg-danger border-0 position-fixed bottom-0 end-0 m-3"
