@@ -4,20 +4,24 @@ import axios from "axios";
 // WhatsApp Alert Function
 export const sendWhatsAppAlert = async (message) => {
   try {
-    const timestamp = new Date().toLocaleString(); // Get the current timestamp
-    const messageWithTimestamp = `${message}\n\nAlert Timestamp: ${timestamp}`; // Append timestamp to message
+    const timestamp = new Date().toLocaleString();
+    // Sanitize message: replace newlines with spaces and limit length
+    const safeMessage = `${message}`.replace(/\n/g, " ").slice(0, 500);
+    const messageWithTimestamp = `${safeMessage} Alert Timestamp: ${timestamp}`;
 
     const response = await axios.get("http://localhost:5000/send-alert", {
       params: {
         phone: "639668649499",
-        message: messageWithTimestamp, // Send message with timestamp
+        message: messageWithTimestamp,
       },
     });
     console.log("Alert sent via backend:", response.data);
   } catch (error) {
-    console.error("Frontend failed to send alert:", error.message);
+    console.warn("WhatsApp alert may have failed:", error.response?.data || error.message);
   }
 };
+
+
 
 // Firestore Alert Monitoring
 export const monitorSensorAlerts = () => {
@@ -41,7 +45,7 @@ export const monitorSensorAlerts = () => {
             : `🚨 Alert: ${alertData.message}`;
           
           // Call WhatsApp alert function with the message
-          sendWhatsAppAlert(alertMessage);
+          // sendWhatsAppAlert(alertMessage);
           
           processedAlertIds.add(docId);
         }

@@ -13,7 +13,14 @@ const Dashboard = () => {
     customPhThreshold: 7,
     customNtuThreshold: 5,
     customAlertInterval: 10,
+    minPh: 6.5,
+    maxPh: 8.5,
+    minNtu: 0,
+    maxNtu: 5,
+    minTds: 0,
+    maxTds: 10,
   });
+
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -51,10 +58,14 @@ const Dashboard = () => {
         }
       });
 
-      const sortedData = Object.values(mergedData).sort((a, b) => a.timestamp - b.timestamp);
+      const sortedData = Object.values(mergedData).sort(
+        (a, b) => a.timestamp - b.timestamp
+      );
       setSensorData(sortedData.slice(-20));
 
-      let latestPh = null, latestNtu = null, latestTds = null;
+      let latestPh = null,
+        latestNtu = null,
+        latestTds = null;
       for (let i = sortedData.length - 1; i >= 0; i--) {
         const item = sortedData[i];
         if (latestPh === null && item.ph != null) latestPh = item.ph;
@@ -83,14 +94,19 @@ const Dashboard = () => {
     const { ph, ntu, tds } = latestData;
     let message = "";
 
-    if (ntu > thresholds.customNtuThreshold) {
-      message += `⚠️ NTU Alert: ${ntu} (Threshold: ${thresholds.customNtuThreshold})\nSolution: Examine the settling tank.\n\n`;
+    // NTU min/max
+    if (ntu < thresholds.minNtu || ntu > thresholds.maxNtu) {
+      message += `⚠️ NTU Alert: ${ntu} (Allowed: ${thresholds.minNtu}-${thresholds.maxNtu})\nSolution: Examine the settling tank.\n\n`;
     }
-    if (ph > thresholds.customPhThreshold) {
-      message += `⚠️ pH Alert: ${ph} (Threshold: ${thresholds.customPhThreshold})\nSolution: Add chlorine.\n\n`;
+
+    // pH min/max
+    if (ph < thresholds.minPh || ph > thresholds.maxPh) {
+      message += `⚠️ pH Alert: ${ph} (Allowed: ${thresholds.minPh}-${thresholds.maxPh})\nSolution: Add chlorine or neutralize.\n\n`;
     }
-    if (tds > thresholds.customTdsThreshold) {
-      message += `⚠️ TDS Alert: ${tds} (Threshold: ${thresholds.customTdsThreshold})\nSolution: Check coagulant tank (PAC).\n\n`;
+
+    // TDS min/max
+    if (tds < thresholds.minTds || tds > thresholds.maxTds) {
+      message += `⚠️ TDS Alert: ${tds} (Allowed: ${thresholds.minTds}-${thresholds.maxTds})\nSolution: Check coagulant tank (PAC).\n\n`;
     }
 
     if (message && shouldTriggerAlert()) {
@@ -111,38 +127,74 @@ const Dashboard = () => {
     }
     return false;
   };
-
   const sendWhatsAppAlert = async (message) => {
-    try {
-      const timestamp = new Date().toLocaleString();
-      const messageWithTimestamp = `${message}\n\nAlert Timestamp: ${timestamp}`;
+  try {
+    const timestamp = new Date().toLocaleString();
+    const messageWithTimestamp = `${message}\n\nAlert Timestamp: ${timestamp}`;
 
-      const response = await axios.get("http://localhost:5000/send-alert", {
-        params: {
-          phone: PHONE_NUMBER,
-          message: messageWithTimestamp,
-        },
-      });
+    const response = await axios.get("http://localhost:5000/send-alert", {
+      params: {
+        phone: PHONE_NUMBER,
+        message: messageWithTimestamp,
+      },
+    });
 
-      const responseText = response.data;
-      if (typeof responseText === 'string' && (
-        responseText.includes("You have 0 messages left") ||
-        responseText.includes("Please, subscribe")
-      )) {
-        setSmsLimitAlert(true);
-        setTimeout(() => setSmsLimitAlert(false), 6000);
-      }
-    } catch (error) {
-      console.error("Failed to send WhatsApp alert", error);
-      setAlertMessage("❌ Failed to send WhatsApp alert. Check server or internet.");
-      setToastMessage("❌ WhatsApp alert failed.");
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 5000);
+    const responseData = response.data;
+    console.log("WhatsApp alert sent. Response:", responseData);
+
+    const responseText =
+      typeof responseData === "string"
+        ? responseData
+        : JSON.stringify(responseData);
+
+    if (responseText.includes("210")) {
+      console.warn("WhatsApp not connected: Status Code 210");
+      return;
     }
-  };
+
+    setToastMessage("✅ WhatsApp alert sent.");
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 5000);
+
+    if (
+      responseText.includes("You have 0 messages left") ||
+      responseText.includes("Please, subscribe")
+    ) {
+      setSmsLimitAlert(true);
+      setTimeout(() => setSmsLimitAlert(false), 6000);
+    }
+  } catch (error) {
+    console.error(
+      "Failed to send WhatsApp alert",
+      error.response?.data || error.message
+    );
+    setToastMessage("❌ Failed to send WhatsApp alert");
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 5000);
+  }
+};
+
 
   const handleManualAlert = () => {
-    sendWhatsAppAlert("🚨 Manual Alert Triggered! Please check the water quality system.");
+    if (!latestSensorValues) {
+      sendWhatsAppAlert(
+        "🚨 Manual Alert Triggered! Sensor data not available."
+      );
+      return;
+    }
+
+    const { ntu, ph, tds } = latestSensorValues;
+
+    const manualMessage = `🚨 Manual Alert Triggered!
+
+Latest Sensor Readings:
+- NTU: ${ntu ?? "N/A"}
+- pH: ${ph ?? "N/A"}
+- TDS: ${tds ?? "N/A"}
+
+Please check the water quality system immediately.`;
+
+    sendWhatsAppAlert(manualMessage);
   };
 
   const handleThresholdChange = (event, type) => {
@@ -166,30 +218,37 @@ const Dashboard = () => {
     <div className="container py-4">
       <h2 className="mb-4">Real-Time Water Quality Monitoring</h2>
 
-      <div className="card mb-4">
-        <div className="card-header">Custom Threshold Settings</div>
-        <div className="card-body row g-3">
-          {[{ label: "TDS", key: "customTdsThreshold" }, { label: "pH", key: "customPhThreshold" }, { label: "NTU", key: "customNtuThreshold" }, { label: "Alert Interval (min)", key: "customAlertInterval" }].map(({ label, key }) => (
-            <div key={key} className="col-md-3">
-              <label className="form-label">{label}</label>
-              <input
-                type="number"
-                className="form-control"
-                value={thresholds[key]}
-                onChange={(e) => handleThresholdChange(e, key)}
-                min="0"
-              />
-            </div>
-          ))}
-          <div className="col-12">
-            <button onClick={saveThresholds} className="btn btn-primary me-3">
-              Save Thresholds
-            </button>
-            {saveStatus && <span className="text-success">{saveStatus}</span>}
+      <div className="card-header">Custom Threshold Settings</div>
+      <div className="card-body row g-3">
+        {[
+          { label: "TDS Min", key: "minTds" },
+          { label: "TDS Max", key: "maxTds" },
+          { label: "pH Min", key: "minPh" },
+          { label: "pH Max", key: "maxPh" },
+          { label: "NTU Min", key: "minNtu" },
+          { label: "NTU Max", key: "maxNtu" },
+          { label: "Alert Interval (min)", key: "customAlertInterval" },
+        ].map(({ label, key }) => (
+          <div key={key} className="col-md-3">
+            <label className="form-label">{label}</label>
+            <input
+              type="number"
+              className="form-control"
+              value={thresholds[key]}
+              onChange={(e) => handleThresholdChange(e, key)}
+              min="0"
+            />
           </div>
+        ))}
+        <div className="col-12">
+          <button onClick={saveThresholds} className="btn btn-primary me-3">
+            Save Thresholds
+          </button>
+          {saveStatus && <span className="text-success">{saveStatus}</span>}
         </div>
       </div>
 
+      <br></br>
       <div className="card mb-8">
         <div className="card-header">Sensor Data Chart</div>
         <div className="card-body">
@@ -235,7 +294,13 @@ const Dashboard = () => {
         <div
           className="alert alert-danger alert-dismissible fade show position-fixed top-50 start-50 translate-middle-x w-75 z-index-1050"
           role="alert"
-          style={{ zIndex: 1050, maxWidth: '600px', textAlign: 'center', borderRadius: '10px', padding: '20px' }}
+          style={{
+            zIndex: 1050,
+            maxWidth: "600px",
+            textAlign: "center",
+            borderRadius: "10px",
+            padding: "20px",
+          }}
         >
           <strong>Warning!</strong> {alertMessage}
           <button
@@ -252,7 +317,13 @@ const Dashboard = () => {
         <div
           className="alert alert-warning position-fixed top-0 end-0 m-4 shadow"
           role="alert"
-          style={{ zIndex: 1060, maxWidth: '300px', textAlign: 'center', borderRadius: '10px', padding: '15px' }}
+          style={{
+            zIndex: 1060,
+            maxWidth: "300px",
+            textAlign: "center",
+            borderRadius: "10px",
+            padding: "15px",
+          }}
         >
           🚫 All free CallMeBot messages used. WhatsApp alerts disabled.
         </div>
