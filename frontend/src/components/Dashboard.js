@@ -20,7 +20,10 @@ const Dashboard = () => {
     minTds: 0,
     maxTds: 10,
   });
-
+  const [telegramSettings, setTelegramSettings] = useState({
+    botToken: "",
+    chatId: "",
+  });
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [alertMessage, setAlertMessage] = useState("");
@@ -29,8 +32,8 @@ const Dashboard = () => {
   const [latestSensorValues, setLatestSensorValues] = useState(null);
   const [smsLimitAlert, setSmsLimitAlert] = useState(false);
 
-  const PHONE_NUMBER = "639668649499";
-  const API_KEY = "2570719";
+  const TELEGRAM_BOT_TOKEN = "8193484376:AAGPCS3hnunvKUCfB1gaWKB8od4QHIYOUK4"; // Replace with your actual bot token
+  const TELEGRAM_CHAT_ID = "7255013068"; // Replace with your actual chat ID
 
   useEffect(() => {
     const thresholdsRef = ref(database, "thresholds");
@@ -80,6 +83,15 @@ const Dashboard = () => {
     });
   }, []);
 
+
+  useEffect(() => {
+  const settingsRef = ref(database, "telegramSettings");
+  return onValue(settingsRef, (snapshot) => {
+    const settingsData = snapshot.val();
+    if (settingsData) setTelegramSettings(settingsData);
+  });
+}, []);
+
   useEffect(() => {
     if (!latestSensorValues) return;
     const intervalMs = thresholds.customAlertInterval * 60 * 1000;
@@ -94,17 +106,14 @@ const Dashboard = () => {
     const { ph, ntu, tds } = latestData;
     let message = "";
 
-    // NTU min/max
     if (ntu < thresholds.minNtu || ntu > thresholds.maxNtu) {
       message += `⚠️ NTU Alert: ${ntu} (Allowed: ${thresholds.minNtu}-${thresholds.maxNtu})\nSolution: Examine the settling tank.\n\n`;
     }
 
-    // pH min/max
     if (ph < thresholds.minPh || ph > thresholds.maxPh) {
       message += `⚠️ pH Alert: ${ph} (Allowed: ${thresholds.minPh}-${thresholds.maxPh})\nSolution: Add chlorine or neutralize.\n\n`;
     }
 
-    // TDS min/max
     if (tds < thresholds.minTds || tds > thresholds.maxTds) {
       message += `⚠️ TDS Alert: ${tds} (Allowed: ${thresholds.minTds}-${thresholds.maxTds})\nSolution: Check coagulant tank (PAC).\n\n`;
     }
@@ -113,7 +122,7 @@ const Dashboard = () => {
       setAlertMessage(message.trim());
       setToastMessage(message.trim());
       setShowToast(true);
-      sendWhatsAppAlert(message.trim());
+      sendTelegramAlert(message.trim());
       setTimeout(() => setShowToast(false), 5000);
     }
   };
@@ -127,75 +136,97 @@ const Dashboard = () => {
     }
     return false;
   };
-  const sendWhatsAppAlert = async (message) => {
+  // Example function in React
+
+//  const sendTelegramAlert = async (message) => {
+//   const { botToken, chatId } = telegramSettings;
+
+//   if (!botToken || !chatId) {
+//     console.warn("Missing Telegram bot token or chat ID.");
+//     return;
+//   }
+
+//   try {
+//   const res = await axios.post("http://localhost:5000/send-telegram-alert", {
+//     chatId,
+//     botToken,
+//     message,
+//   });
+//   console.log("✅ Telegram alert response:", res.data);
+// } catch (err) {
+//   console.error("❌ Telegram alert failed:", err.response?.data || err.message);
+// }
+
+// };
+
+const sendTelegramAlert = async (message) => {
+  const { botToken, chatId } = telegramSettings;
+
+  if (!botToken || !chatId) {
+    console.warn("Missing Telegram bot token or chat ID.");
+    return;
+  }
+
   try {
-    const timestamp = new Date().toLocaleString();
-    const messageWithTimestamp = `${message}\n\nAlert Timestamp: ${timestamp}`;
-
-    const response = await axios.get("http://localhost:5000/send-alert", {
-      params: {
-        phone: PHONE_NUMBER,
-        message: messageWithTimestamp,
-      },
+    const res = await axios.post("http://localhost:5000/send-telegram-alert", {
+      chatId,
+      botToken,
+      message,
     });
-
-    const responseData = response.data;
-    console.log("WhatsApp alert sent. Response:", responseData);
-
-    const responseText =
-      typeof responseData === "string"
-        ? responseData
-        : JSON.stringify(responseData);
-
-    if (responseText.includes("210")) {
-      console.warn("WhatsApp not connected: Status Code 210");
-      return;
-    }
-
-    setToastMessage("✅ WhatsApp alert sent.");
+    console.log("✅ Telegram alert sent:", res.data);
+    setToastMessage("✅ Telegram alert sent!");
     setShowToast(true);
-    setTimeout(() => setShowToast(false), 5000);
-
-    if (
-      responseText.includes("You have 0 messages left") ||
-      responseText.includes("Please, subscribe")
-    ) {
-      setSmsLimitAlert(true);
-      setTimeout(() => setSmsLimitAlert(false), 6000);
-    }
-  } catch (error) {
-    console.error(
-      "Failed to send WhatsApp alert",
-      error.response?.data || error.message
-    );
-    setToastMessage("❌ Failed to send WhatsApp alert");
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 5000);
+    setTimeout(() => setShowToast(false), 3000);
+  } catch (err) {
+    console.error("❌ Telegram alert failed:", err.response?.data || err.message);
   }
 };
 
 
+
+
   const handleManualAlert = () => {
-    if (!latestSensorValues) {
-      sendWhatsAppAlert(
-        "🚨 Manual Alert Triggered! Sensor data not available."
-      );
-      return;
-    }
+  if (!latestSensorValues || !thresholds) {
+    sendTelegramAlert(
+      "🚨 Manual Alert Triggered! Sensor data or thresholds not available."
+    );
+    return;
+  }
 
-    const { ntu, ph, tds } = latestSensorValues;
+  const { ntu, ph, tds } = latestSensorValues;
 
-    const manualMessage = `🚨 Manual Alert Triggered!
+  let message = `🚨 Manual Alert Triggered!\n\nLatest Sensor Readings:\n- NTU: ${
+    ntu ?? "N/A"
+  }\n- pH: ${ph ?? "N/A"}\n- TDS: ${tds ?? "N/A"}\n\n`;
 
-Latest Sensor Readings:
-- NTU: ${ntu ?? "N/A"}
-- pH: ${ph ?? "N/A"}
-- TDS: ${tds ?? "N/A"}
+  // Append recommendations based on thresholds
+  if (ntu < thresholds.minNtu || ntu > thresholds.maxNtu) {
+    message += `⚠️ NTU Alert: ${ntu} (Allowed: ${thresholds.minNtu}-${thresholds.maxNtu})\nSolution: Examine the settling tank.\n\n`;
+  }
 
-Please check the water quality system immediately.`;
+  if (ph < thresholds.minPh || ph > thresholds.maxPh) {
+    message += `⚠️ pH Alert: ${ph} (Allowed: ${thresholds.minPh}-${thresholds.maxPh})\nSolution: Add chlorine or neutralize.\n\n`;
+  }
 
-    sendWhatsAppAlert(manualMessage);
-  };
+  if (tds < thresholds.minTds || tds > thresholds.maxTds) {
+    message += `⚠️ TDS Alert: ${tds} (Allowed: ${thresholds.minTds}-${thresholds.maxTds})\nSolution: Check coagulant tank (PAC).\n\n`;
+  }
+
+  // Final fallback if all values are within range
+  if (
+    ntu >= thresholds.minNtu &&
+    ntu <= thresholds.maxNtu &&
+    ph >= thresholds.minPh &&
+    ph <= thresholds.maxPh &&
+    tds >= thresholds.minTds &&
+    tds <= thresholds.maxTds
+  ) {
+    message += "✅ All values are within acceptable thresholds.\n";
+  }
+
+  sendTelegramAlert(message);
+};
+
 
   const handleThresholdChange = (event, type) => {
     const value = event.target.value;
@@ -213,6 +244,18 @@ Please check the water quality system immediately.`;
       setSaveStatus("Failed to save thresholds.");
     }
   };
+  const saveTelegramSettings = async () => {
+  try {
+    const settingsRef = ref(database, "telegramSettings");
+    await set(settingsRef, telegramSettings);
+    setSaveStatus("Telegram settings saved!");
+    setTimeout(() => setSaveStatus(""), 3000);
+  } catch (err) {
+    console.error("Failed to save Telegram settings:", err);
+    setSaveStatus("Failed to save Telegram settings.");
+  }
+};
+
 
   return (
     <div className="container py-4">
@@ -221,25 +264,36 @@ Please check the water quality system immediately.`;
       <div className="card-header">Custom Threshold Settings</div>
       <div className="card-body row g-3">
         {[
-          { label: "TDS Min", key: "minTds" },
-          { label: "TDS Max", key: "maxTds" },
-          { label: "pH Min", key: "minPh" },
-          { label: "pH Max", key: "maxPh" },
-          { label: "NTU Min", key: "minNtu" },
-          { label: "NTU Max", key: "maxNtu" },
-          { label: "Alert Interval (min)", key: "customAlertInterval" },
-        ].map(({ label, key }) => (
-          <div key={key} className="col-md-3">
-            <label className="form-label">{label}</label>
-            <input
-              type="number"
-              className="form-control"
-              value={thresholds[key]}
-              onChange={(e) => handleThresholdChange(e, key)}
-              min="0"
-            />
-          </div>
-        ))}
+          "TDS Min",
+          "TDS Max",
+          "pH Min",
+          "pH Max",
+          "NTU Min",
+          "NTU Max",
+          "Alert Interval (min)",
+        ].map((label, i) => {
+          const key = [
+            "minTds",
+            "maxTds",
+            "minPh",
+            "maxPh",
+            "minNtu",
+            "maxNtu",
+            "customAlertInterval",
+          ][i];
+          return (
+            <div key={key} className="col-md-3">
+              <label className="form-label">{label}</label>
+              <input
+                type="number"
+                className="form-control"
+                value={thresholds[key]}
+                onChange={(e) => handleThresholdChange(e, key)}
+                min="0"
+              />
+            </div>
+          );
+        })}
         <div className="col-12">
           <button onClick={saveThresholds} className="btn btn-primary me-3">
             Save Thresholds
@@ -248,7 +302,7 @@ Please check the water quality system immediately.`;
         </div>
       </div>
 
-      <br></br>
+      <br />
       <div className="card mb-8">
         <div className="card-header">Sensor Data Chart</div>
         <div className="card-body">
@@ -289,6 +343,40 @@ Please check the water quality system immediately.`;
           🚨 Send Manual Alert
         </button>
       </div>
+      <br></br>
+      <div className="card-header mt-4">Telegram Alert Settings</div>
+      <br></br>
+<div className="card-body row g-3">
+  <br></br>
+  <div className="col-md-6">
+    <label className="form-label">Telegram Bot Token</label>
+    <input
+      type="text"
+      className="form-control"
+      value={telegramSettings.botToken}
+      onChange={(e) => setTelegramSettings((prev) => ({
+        ...prev, botToken: e.target.value
+      }))}
+    />
+  </div>
+  <div className="col-md-6">
+    <label className="form-label">Telegram Chat ID</label>
+    <input
+      type="text"
+      className="form-control"
+      value={telegramSettings.chatId}
+      onChange={(e) => setTelegramSettings((prev) => ({
+        ...prev, chatId: e.target.value
+      }))}
+    />
+  </div>
+  <div className="col-12">
+    <button onClick={saveTelegramSettings} className="btn btn-success me-3">
+      Save Telegram Settings
+    </button>
+  </div>
+</div>
+
 
       {alertMessage && (
         <div
